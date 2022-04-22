@@ -6,6 +6,13 @@
   <packaging>jar</packaging>
   <version>1.0-SNAPSHOT</version>
   <name>JAVA-REPL</name>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+  </properties>
+
   <url>http://maven.apache.org</url>
   <dependencies>
     <dependency>
