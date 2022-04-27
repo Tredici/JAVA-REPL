@@ -1,7 +1,8 @@
 
-package it.sssupapp.app.repl;
+package it.sssupapp.app.repl.exceptions;
 
 public class UnknownReplStatusException extends ReplException {
-    public UnknownReplStatusException() { super(); }
-    public UnknownReplStatusException(String msg) { super(msg); }    
+    public UnknownReplStatusException(String msg) {
+        super(msg);
+    }
 }
