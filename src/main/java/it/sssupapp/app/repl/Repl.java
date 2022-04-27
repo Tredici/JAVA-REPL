@@ -2,9 +2,15 @@
 package it.sssupapp.app.repl;
 
 import it.sssupapp.app.repl.CommandManager.ReadyToExecute;
+import it.sssupapp.app.repl.annotations.AfterAll;
+import it.sssupapp.app.repl.annotations.AfterEach;
+import it.sssupapp.app.repl.annotations.BeforeAll;
+import it.sssupapp.app.repl.annotations.BeforeEach;
 import it.sssupapp.app.repl.annotations.Command;
+import it.sssupapp.app.repl.exceptions.*;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.function.Supplier;
 
 public class Repl {
 
@@ -55,18 +61,86 @@ public class Repl {
         cmdMngr.addMethod(base, method);
     }
 
+    private List<Supplier<Exception>> beforeAll = new ArrayList<>();
+    private List<Supplier<Exception>> afterAll = new ArrayList<>();
+    private List<Supplier<Exception>> beforeEach = new ArrayList<>();
+    private List<Supplier<Exception>> afterEach = new ArrayList<>();
+
+    private Exception execList(List<Supplier<Exception>> l) {
+        for (var supplier : l) {
+            var e = supplier.get();
+            if (e != null) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    private void execBeforeAll() throws BeforeAllException {
+        var e = execList(beforeAll);
+        if (e != null) {
+            throw new BeforeAllException(e);
+        }
+    }
+
+    private void execAfterAll() throws AfterAllException {
+        var e = execList(afterAll);
+        if (e != null) {
+            throw new AfterAllException(e);
+        }
+    }
+
+    private void execBeforeEach() throws BeforeEachException {
+        var e = execList(beforeEach);
+        if (e != null) {
+            throw new BeforeEachException(e);
+        }
+    }
+
+    private void execAfterEach() throws AfterEachException {
+        var e = execList(afterEach);
+        if (e != null) {
+            throw new AfterEachException(e);
+        }
+    }
+
+    private Supplier<Exception> packHandler(Object obj, Method method)
+    {
+        return () -> {
+            try {
+                method.invoke(obj);
+                return null;
+            } catch (Exception e) {
+                return e;
+            }
+        };
+    }
+
     public Repl(ReplConfig config) throws Exception
     {
         this.config = config;
         this.reader = new Scanner(System.in);
         this.cmds = new HashMap<>();
 
+        var obj = config.getCommandObject();
         // aggiunge i nomi dei comandi riconosciuti
         for (var cmd : config.getCommandObject().getClass().getMethods()) {
-            if (!cmd.isAnnotationPresent(Command.class))
-                continue;
-            var cmdName = cmd.getName();
-            addCommandHandler(cmdName, config.getCommandObject(), cmd);
+            if (cmd.isAnnotationPresent(Command.class)) {
+                var cmdName = cmd.getName();
+                addCommandHandler(cmdName, obj, cmd);
+            }
+            else if (cmd.isAnnotationPresent(BeforeAll.class)) {
+                this.beforeAll.add(packHandler(obj, cmd));
+            }
+            else if (cmd.isAnnotationPresent(AfterAll.class)) {
+                this.afterAll.add(packHandler(obj, cmd));
+            }
+            else if (cmd.isAnnotationPresent(BeforeEach.class)) {
+                this.beforeEach.add(packHandler(obj, cmd));
+            }
+            else if (cmd.isAnnotationPresent(AfterEach.class)) {
+                this.afterEach.add(packHandler(obj, cmd));
+            }
         }
     }
 
@@ -83,13 +157,12 @@ public class Repl {
         return this.cmds.get(cmdName);
     }
 
-    public ReplStatus run() throws UnknownReplStatusException
+    public ReplStatus run() throws UnknownReplStatusException, ReplException
     {
         ReplStatus ans = ReplStatus.Continue;
         boolean exit = false;
 
-        if (config.beforeAll != null)
-            config.beforeAll.get();
+        execBeforeAll();
         try
         {
             do {
@@ -125,8 +198,7 @@ public class Repl {
                     continue;
                 }
 
-                if (config.before != null)
-                    config.before.get();
+                execBeforeEach();
                 
                 try
                 {
@@ -142,7 +214,7 @@ public class Repl {
                                 exit = true;
                                 break;
                             default:
-                                throw new UnknownReplStatusException();
+                                throw new UnknownReplStatusException("Unknowk: " + ans);
                         }
                     }
                     catch (Exception e)
@@ -155,15 +227,13 @@ public class Repl {
                 }
                 finally
                 {
-                    if (config.after != null)
-                        config.after.get();
+                    execAfterEach();
                 }
             } while (!exit);
         }
         finally
         {
-            if (config.afterAll != null)
-                config.afterAll.get();
+            execAfterAll();
         }
         return ans;
     }
