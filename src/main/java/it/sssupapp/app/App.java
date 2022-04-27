@@ -8,7 +8,7 @@ import it.sssupapp.app.repl.annotations.Command;
  * Hello world!
  *
  */
-public class App 
+public class App
 {
     @Command
     public ReplStatus test()
@@ -45,14 +45,30 @@ public class App
         return ReplStatus.Exit;
     }
 
+    @BeforeEach
+    public void beforeEach() {
+        System.out.println("[<before>]");
+    }
+
+    @AfterEach
+    public void afterEach() {
+        System.out.println("[<after>]");
+    }
+
+    @BeforeAll
+    public void beforeAll() {
+        System.out.println("[<beforeAll>]");
+    }
+
+    @AfterAll
+    public void afterAll() {
+        System.out.println("[<afterAll>]");
+    }
+
     public static void main(String[] args) throws Exception {
         System.out.println("Running test");
 
         var conf = new ReplConfig();
-        conf.after = () -> { System.out.println("[<after>]"); return null; };
-        conf.before = () -> { System.out.println("[<before>]"); return null; };
-        conf.afterAll = () -> { System.out.println("[<afterAll>]"); return null; };
-        conf.beforeAll = () -> { System.out.println("[<beforeAll>]"); return null; };
         conf.cmdNotFound = (cmd) -> { System.out.println("Unknown cmd \"" + cmd + "\", try \"help\"!"); };
         conf.commandObject = new App();
 
