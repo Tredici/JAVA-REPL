@@ -10,4 +10,8 @@ public class ReplException extends Exception {
     public ReplException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public ReplException(Throwable cause) {
+        super(cause);
+    }
 }

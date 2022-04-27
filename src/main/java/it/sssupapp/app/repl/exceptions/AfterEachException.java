@@ -4,4 +4,8 @@ public class AfterEachException extends ReplException {
     public AfterEachException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public AfterEachException(Throwable cause) {
+        super(cause);
+    }
 }
